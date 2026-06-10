@@ -10,81 +10,83 @@ const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false }, realtime: { transport: ws } });
 
 const geminiApiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
-const ai Object = new GoogleGenAI({ apiKey: geminiApiKey });
+const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+��[��[ۈ�[�\�]U�\�[�X�]Q�[J�[��Έ[�V�K�X�]T]���[��H]\���۝[�H��ܚ\[���W��ܚ\\N���
+��^T�\��L�^T�\�N�NL���Ս
+��[\�W��ܛX]��[YK�۝�[YK�۝�^�K�[X\�P���\��X�ۙ\�P���\��][�P���\��X�����\���][X�[�\�[�K��Z�S�]��[V��[VK�X�[��[��K�ܙ\��[K�][�K�Y��[YۛY[�X\��[�X\��[��X\��[��[���[����[N��\�[�۝[\X�K	�������	�����	�	�KLL�KK��M�W���]�[��W��ܛX]�^Y\��\�[��[K�[YKX\��[�X\��[��X\��[��Y��X�^���[��˙�ܑXX�
 
-function generateViralSubtitleFile(chunks: any[], subtitlePath: string) {
-  let assContent = `[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: ViralFont,Impact,85,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,1,0,0,0,100,100,2,0,1,8,0,5,30,30,960,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+�[��HO��ۜ��\���H�[�˜�\��ۜ�[���H�[�˙[�]�X[�^H�[�˝^��[J
+K��\\��\�J
+NY�
+X]��[��J
+H���	���X[�^��]
+��K�[���JH�ۜ��ܙ�H�X[�^��]
+��N�ܙ��HH�ɒ�����I��ܙ��_^�ɒ�������X�X[�^H�ܙ˚��[���NB�\���۝[�
+�HX[��YN�	��\���K	�[���K�\�[�۝	��X[�^W�JN�˝ܚ]Q�[T�[���X�]T]\���۝[�
+NB��\�[���[��[ۈ�[��\\�[��[�J
+H�ۜ��]N��؈HH]�Z]�\X�\�K����J	��\[��ڛ؜��K��[X�
+	ʉ�K�\J	��]\��	�]Y]YY	�K�ܙ\�	�ܙX]Y�]	��\��[�[�Έ�YHJK�[Z]
+JK��[��J
+NY�
+Z�؊H�]\���]�Z]�\X�\�K����J	��\[��ڛ؜��K�\]J��]\Έ	����\��[���JK�\J	�Y	��؋�Y
+N�ۜ��ۛ�Y]H]���[����\�˘��
 
-  chunks.forEach((chunk) => {
-    const startStr = chunk.start;
-    const endStr = chunk.end;
-    let cleanText = chunk.text.trim().toUpperCase();
-    if (Math.random() > 0.6 && cleanText.split(" ").length > 1) {
-      const words = cleanText.split(" ");
-      words[0] = `{\\c&H00FFFF&}${words[0]}{\\c&H00FFFFFF&}`;
-      cleanText = words.join(" ");
-    }
-    assContent += `Dialogue: 0,${startStr},${endStr},ViralFont,,0,0,0,,${cleanText}\n`;
-  });
-  fs.writeFileSync(subtitlePath, assContent);
-}
+K	ܘ]�ݚY[˛\	�N�ۜ�ܛ�Y]H]���[����\�˘��
 
-async function runClipperEngine() {
-  const { data: job } = await supabase.from('clipping_jobs').select('*').eq('status', 'queued').order('created_at', { ascending: true }).limit(1).single();
-  if (!job) return;
+K	�ܛ�YݚY[˛\	�N�ۜ��X�]T]H]���[����\�˘��
 
-  await supabase.from('clipping_jobs').update({ status: 'processing' }).eq('id', job.id);
-  const downloadPath = path.join(process.cwd(), 'raw_video.mp4');
-  const croppedPath = path.join(process.cwd(), 'cropped_video.mp4');
-  const subtitlePath = path.join(process.cwd(), 'subtitles.ass');
-  const finalVideoPath = path.join(process.cwd(), 'output_short.mp4');
+K	��X�]\˘\���N�ۜ��[�[�Y[�]H]���[����\�˘��
 
-  try {
-    console.log(`📥 Resolving media stream via hardened residential resolver...b);
-    const resolverApi = `https://url.findvideo.biz/api/buzzclip`;
-    const res = await fetch(resolverApi, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videoId: job.source_video_id })
-    });
+K	��]]��ܝ�\	�N��H�ۜ��K���<'��H�\���[��YYXH��X[H�XH\�[�Y�\�Y[�X[�\���\�����N�ۜ��\���\�\HH΋��\���[��Y[˘�^��\K؝^���\�ۜ��\�H]�Z]�]�
+�\���\�\KY]��	���	��XY\�Έ�	��۝[�U\IΈ	�\X�][ۋڜ�ۉ�K���N���Ӌ���[��Y�J��Y[�Y��؋���\��WݚY[��YJB�JN�Y�
+\�\˛ڞJH����]�\��܊�\���\�TH�Z�X�Y�]�]\Έ	ܙ\˜�]\�X
+N�ۜ�]N�[�HH]�Z]�\˚��ۊ
+NY�
+Y]K���X[U\�
+H����]�\��܊	јZ[Y�^�X��[Y\\�X�[���N��ۜ��K���<'��H��X[H�\���YH�ۛ�Y[���]��]\ˋ��
+N�ۜ��[T�\�H]�Z]�]�
+]K���X[U\�
+N�ۜ�\��^P�Y��\�H]�Z]�[T�\˘\��^P�Y��\�
+N�˝ܚ]Q�[T�[���ۛ�Y]�Y��\�����J\��^P�Y��\�JN��ۜ��K���<'�ܛ�[���Y[ˋ���N]�Z]�]���Z\�O��Y�
+�\���K�Z�X�
+HO���\Y�ܛ�Y]
+K��]�\�[YJ	���L	�K��]\�][ۊ�
+K��Y[њ[\����ܛ�Z[��
+�K�M�N�[���[���[�]��K̎�	�	���[OLL�NL�	�JK��]]
+ܛ�Y]
+B��ۊ	�[�	�
 
-    if (!res.ok) throw new Error(`Resolver API rejected with status: ${res.startus}`);
-    const data: any = await res.json();
-    if (!data.streamUrl) throw new Error('Failed to extract valid mp4 direct link' ;
+HO��\���J
+JK�ۊ	�\��܉�
+\��HO��Z�X�
+\��JK��[�
+NJN��ۜ��K���<'���[�\�][��Y]Y]K���
+N�ۜ�ZT��\H\��ΈK��\�[����܈�ڛ؋��Y[��]_H�����[]]�H��ӈ[Y\�[\�\[ۜ��܈H���\�\�[����L��\�ۜ�HVP�H\���ӎ���Y]Y]H������\[ۜȎ��Ȝ�\���������[������ˌ��^����WHX�ۜ�ZT�\�ۜ�HH]�Z]ZK�[�[˙�[�\�]P�۝[�
+�[�[�	��[Z[�KL��KY�\�	��۝[�ΈZT��\JN�ۜ�^[�YH��Ӌ�\��J
+ZT�\�ۜ�K�^	��I�K��\X�J���۟��	��K��[J
+JN��[�\�]U�\�[�X�]Q�[J^[�Y��\[ۜ��X�]T]
+N��ۜ��K���<'�)H�\��[���X�]\ˋ��
+N]�Z]�]���Z\�O��Y�
+�\���K�Z�X�
+HO���\Y�ܛ�Y]
+K��Y[њ[\���X�]\�I��X�]T]X
+K��]]
+�[�[�Y[�]
+B��ۊ	�[�	�
 
-    console.log(`📡 Stream resolved! Downloading raw bytes...`);
-    const fileRes = await fetch(data.streamUrl);
-    const arrayBuffer = qwait fileRes.arrayBuffer();
-    fs.writeFileSync(downloadPath, Buffer.from(arrayBuffer));
-
-    console.log(`🎬 Cropping video...b);
-    await new Promise<void>((resolve, reject) => {
-      ffmpeg(croppedPath).setStartTime('00:00:10').setDuration(30).videoFilters(['crop=in_h*(9/16):in_h:(in_w-out_w)/2:0', 'scale=1080:1920']).output(croppedPath)
-        .on('end', () => resolve()).on('error', (err) => reject(err)).run();
-    });
-
-    console.log(`🧠 Generating metadata...`);
-    const aiPrompt = `Tasks: 1. Viral hook for "${job.video_title}". 2. Relative JSON timestamp captions for a 30s clip starting 0:00:10. Response EXACTLY as JSON: { "metadata": "TXT", "captions": [{"start": "0:00:00.00", "end": "0:00:03.00", "text": "TXT"}] }`;
-    const aiResponse = await aiObject.models.generateContent({ model: 'gemini-2.5-flash', contents: aiPrompt });
-    const payload = JSON.parse((aiResponse.text || '{}').replace(/```json|```/g, '').trim());
-    
-    generateViralSubtitleFile(payload.captions, subtitlePath);
-
-    console.log(`🔥 Burning subtitles...`);
-    await new Promise<void>((resolve, reject) => {
-      ffmpeg(croppedPath).videoFilters(`subtitles=${subtitlePath}`).output(finalVideoPath)
-        .on('end', () => resolve()).on('error', (err) => reject(err)).run();
-    });
-
-    [downloadPath, croppedPath, subtitlePath, finalVideoPath].forEach(p => fs.existsSync(p) && fs.unlinkSync(p));
-    await supabase.from('clipping_jobs').update({ status: 'completed' }).eq('id', job.id);
-    console.log(`✅ Success!`);
-
-  } catch (err: any) {
-    console.error(`💥 Error:`, err.message);
-    [downloadPath, croppedPath, subtitlePath, finalVideoPath].forEach(p => fs.existsSync(p) && fs.unlinkSync(p));
-    await supabase.from('clipping_jobs').update({ status: 'failed' }).eq('id', job.id);
-  }
-}
-
-runClipperEngine();
+HO��\���J
+JK�ۊ	�\��܉�
+\��HO��Z�X�
+\��JK��[�
+NJN���ۛ�Y]ܛ�Y]�X�]T]�[�[�Y[�]K��ܑXX�
+O��˙^\���[��
+H	���˝[�[���[��
+JN]�Z]�\X�\�K����J	��\[��ڛ؜��K�\]J��]\Έ	���\]Y	�JK�\J	�Y	��؋�Y
+N�ۜ��K���8�!H�X��\��X
+N�H�]�
+\���[�JH�ۜ��K�\��܊<'�H\��܎�\���Y\��Y�JN��ۛ�Y]ܛ�Y]�X�]T]�[�[�Y[�]K��ܑXX�
+O��˙^\���[��
+H	���˝[�[���[��
+JN]�Z]�\X�\�K����J	��\[��ڛ؜��K�\]J��]\Έ	٘Z[Y	�JK�\J	�Y	��؋�Y
+NB�B���[��\\�[��[�J
+N
