@@ -81,8 +81,17 @@ if not response:
 clean_json_str = response.text.replace("```json", "").replace("```", "").strip()
 metadata = json.loads(clean_json_str)
 
-print(f"🎬 Clipping viral sequence: {metadata['start_sec']}s - {metadata['end_sec']}s")
-clip = VideoFileClip(local_raw_path).subclipped(metadata["start_sec"], metadata["end_sec"])
+# Load clip to check its actual length first
+    full_clip = VideoFileClip(local_raw_path)
+    
+    # Auto-adjust bounds so short test videos never cause a crash
+    start_time = min(metadata["start_sec"], full_clip.duration - 1)
+    end_time = min(metadata["end_sec"], full_clip.duration)
+    
+    if start_time < 0: start_time = 0
+
+    print(f"🎬 Clipping viral sequence safely: {start_time}s - {end_time}s")
+    clip = full_clip.subclipped(start_time, end_time)
 w, h = clip.size
 target_w = int(h * (9/16))
 cropped_clip = clip.cropped(x_center=w/2, y_center=h/2, width=target_w, height=h)
