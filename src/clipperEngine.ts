@@ -129,7 +129,7 @@ async function runClipperEngine() {
 
   try {
     console.log(`📥 Downloading source media stream directly from YouTube...`);
-    const videoUrl = `https://www.youtube.com/watch?v=\${job.source_video_id}`;
+    const videoUrl = `https://www.youtube.com/watch?v=${job.source_video_id}`;
     
     // Download video combining best tracks, utilizing secure cookies, and binding the node runtime environment path explicitly
     await ytDlpWrap.execPromise([
