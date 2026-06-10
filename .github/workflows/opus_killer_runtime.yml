@@ -1,0 +1,41 @@
+name: Open-Source Opus Clip Generator Engine
+
+on:
+  # Allows you to manually trigger the machine with a single click
+  workflow_dispatch:
+  # Triggers automatically every hour to check for new uploads
+  schedule:
+    - cron: '0 * * * *'
+
+jobs:
+  render-viral-clips:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clone Repository Branch
+      uses: actions/checkout@v4
+
+    - name: Configure Python Runtime environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Inject System Media Processing Binaries (FFmpeg & ImageMagick)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg imagemagick libmagick++-dev
+        # Open up ImageMagick security rules so MoviePy can safely write text to mp4 files
+        sudo sed -i 's/rights="none" pattern="@\*"/rights="read|write" pattern="@\*"/g' /etc/ImageMagick-6/policy.xml
+
+    - name: Install Python Core Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install supabase google-genai moviepy requests
+
+    - name: Execute Opus Alternative Engine Code
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: python src/opusKiller.py
