@@ -2,11 +2,12 @@ import os
 import sys
 import json
 import requests
+import time
 from google import genai
+from google.genai import types
 from supabase import create_client, Client
 from moviepy import VideoFileClip, TextClip, CompositeVideoClip
 
-# Verify that TypeScript successfully handed over the target file name
 if len(sys.argv) < 2:
     print("💥 Error: No video asset name passed from wrapper framework.")
     sys.exit(1)
@@ -24,9 +25,24 @@ ai_client = genai.Client(api_key=gemini_key)
 local_raw_path = "raw_source.mp4"
 local_output_path = "output_viral_short.mp4"
 
-print("🧠 Transcribing file and evaluating semantic virality vectors via Gemini...")
+print("🧠 Uploading video asset to Gemini cloud workspace...")
 cloud_file = ai_client.files.upload(file=local_raw_path)
 
+print("⏳ Waiting for Google's servers to process the media file...")
+# Wait loop to make sure the file state switches to ACTIVE
+while True:
+    file_info = ai_client.files.get(name=cloud_file.name)
+    state = file_info.state.name if hasattr(file_info.state, 'name') else str(file_info.state)
+    print(f"   Current file processing status: {state}")
+    if state == "ACTIVE":
+        print("✅ Video is live and active on Gemini's engine!")
+        break
+    elif state in ["FAILED", "ERROR"]:
+        print("💥 Google failed to process the video asset track.")
+        sys.exit(1)
+    time.sleep(5)
+
+print("🧠 Evaluating semantic virality vectors and pulling timestamps...")
 ai_prompt = """
 Tasks:
 1. Analyze this video asset file. Identify the most engaging, high-retention 30-second window.
@@ -103,7 +119,13 @@ requests.post(sheet_url, json={
 print("🧹 Purging cloud storage source queue...")
 supabase.storage.from_("raw-videos").remove([target_file])
 
+# Clean up local workspace memory allocations
 clip.close()
 final_clip.close()
+try:
+    ai_client.files.delete(name=cloud_file.name)
+except Exception:
+    pass
 os.remove(local_raw_path)
 os.remove(local_output_path)
+print("🚀 Done! Your custom, free Opus engine just updated your Google Sheet.")
