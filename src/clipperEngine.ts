@@ -13,7 +13,17 @@ const geminiApiKey = process.env.GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
 function generateViralSubtitleFile(chunks: any[], subtitlePath: string) {
-  let assContent = `[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: ViralFont,Impact,85,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,1,0,0,0,100,100,2,0,1,8,0,5,30,30,960,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+  let assContent = `[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: ViralFont,Impact,85,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,1,0,0,0,100,100,2,0,1,8,0,5,30,30,960,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
 
   chunks.forEach((chunk) => {
     const startStr = chunk.start;
@@ -40,28 +50,42 @@ async function runClipperEngine() {
   const finalVideoPath = path.join(process.cwd(), 'output_short.mp4');
 
   try {
-    console.log(`📥 Downloading via Cobalt proxy API...`);
-    const mirrorResponse = await fetch(`https://api.cobalt.tools/api/json`, {
-      method: 'POST',
-      headers: { 
-        'Accept': 'application/json', 
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Origin': 'https://cobalt.tools',
-        'Referer': 'https://cobalt.tools/'
-      },
-      body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${job.source_video_id}`, vQuality: '720', filenamePattern: 'basic' })
-    });
-
-    if (!mirrorResponse.ok) {
-      const errText = await mirrorResponse.text();
-      throw new Error(`Cobalt API Firewall Block (${mirrorResponse.status}): ${errText}`);
-    }
+    console.log(`📥 Connecting to Cobalt community mirror matrix...`);
+    const videoUrl = `https://www.youtube.com/watch?v=${job.source_video_id}`;
     
-    const mirrorData: any = await mirrorResponse.json();
-    if (mirrorData.status === 'error' || !mirrorData.url) {
-      throw new Error(`Mirror processing error: ${mirrorData.text || 'Failed to resolve stream'}`);
+    // Array of independent, Cloudflare-free community proxy servers
+    const mirrors = [
+      'https://cobalt.kocour.space/api/json',
+      'https://api.cobalt.owo.si/api/json',
+      'https://co.eepy.today/api/json',
+      'https://api.zeon.dev/api/json'
+    ];
+
+    let mirrorData: any = null;
+
+    for (const mirror of mirrors) {
+      try {
+        console.log(`🔌 Testing mirror node: ${mirror}`);
+        const res = await fetch(mirror, {
+          method: 'POST',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+          body: JSON.stringify({ url: videoUrl, vQuality: '720', filenamePattern: 'basic' })
+        });
+        
+        if (res.ok) {
+          const data: any = await res.json();
+          if (data.status !== 'error' && data.url) {
+            mirrorData = data;
+            console.log(`✅ Success! Stream resolved through ${mirror}`);
+            break; // Exit the loop, we got the video!
+          }
+        }
+      } catch (e) {
+        console.log(`⚠️ Mirror node blocked or offline, jumping to next...`);
+      }
     }
+
+    if (!mirrorData) throw new Error(`All community proxy mirrors failed to resolve the stream.`);
     
     const fileStreamResponse = await fetch(mirrorData.url);
     const fileBuffer = await fileStreamResponse.arrayBuffer();
