@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { GoogleGenAI } from '@google/genai';
 import YTDlpWrap from 'yt-dlp-wrap';
 import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
@@ -8,6 +9,10 @@ import fs from 'fs';
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Initialize the Google Gemini AI SDK Context
+const geminiApiKey = process.env.GEMINI_API_KEY || '';
+const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
 // Initialize yt-dlp binary wrapper
 const ytDlpWrap = new YTDlpWrap.default();
@@ -51,7 +56,6 @@ async function runClipperEngine() {
     console.log(`📥 Downloading source media stream directly from YouTube...`);
     const videoUrl = `https://www.youtube.com/watch?v=${job.source_video_id}`;
     
-    // Download video combining best video and audio track formats into a single container
     await ytDlpWrap.execPromise([
       videoUrl,
       '-f', 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]',
@@ -59,17 +63,14 @@ async function runClipperEngine() {
     ]);
     console.log("✅ Raw source video downloaded successfully.");
 
-    // 4. Transform horizontal 16:9 widescreen video into a center-cropped vertical 9:16 portrait video
+    // 4. Transform horizontal 16:9 widescreen video into center-cropped vertical 9:16 portrait
     console.log("🎬 Spawning FFmpeg process: Extracting a 30-second center-cropped 9:16 video clip...");
-    
     await new Promise<void>((resolve, reject) => {
       ffmpeg(downloadPath)
-        .setStartTime('00:00:10') // Start cutting 10 seconds into the video to skip intros
-        .setDuration(30)          // Extract exactly 30 seconds of high-fidelity footage
+        .setStartTime('00:00:10') 
+        .setDuration(30)          
         .videoFilters([
-          // Crop matrix math formulas: crop widescreen video down to a 9:16 vertical box right in the center
           'crop=in_h*(9/16):in_h:(in_w-out_w)/2:0',
-          // Force standard mobile Shorts/Reels dimensions (1080x1920 portrait HD resolution)
           'scale=1080:1920'
         ])
         .output(outputPath)
@@ -84,22 +85,50 @@ async function runClipperEngine() {
         .run();
     });
 
-    // 5. Clean up local temporary media files from the server storage
+    // 5. Fire the Viral Caption AI Generation Layer
+    console.log("🧠 Invoking Gemini AI Engine. Crafting viral title hooks and hashtags...");
+    
+    const aiPrompt = `
+      You are an expert viral social media manager specializing in hyper-growth for YouTube Shorts and Instagram Reels.
+      Analyze the following original video title: "${job.video_title}"
+      
+      Generate a highly-engaging response formatted EXACTLY like this text template block below, with no other conversational markdown filler text:
+      
+      VIRAL TITLE HOOK: [Write an ultra-catchy, emotional or curiosity-inducing short title hook here under 60 characters with an emoji]
+      
+      VIRAL DESCRIPTION CONTAINER:
+      [Write a 2-sentence highly engaging summary designed to keep users in the comment section longer]
+      
+      🔥 Trending Hashtags:
+      #shorts #reels #[3 niche hashtags matching the video context topic here]
+    `;
+
+    const aiResponse = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: aiPrompt,
+    });
+
+    const generatedMetadata = aiResponse.text || 'Viral caption generation failed.';
+    console.log("🔥 AI Metadata Generation Strategy Finalized:\n", generatedMetadata);
+
+    // 6. Clean up local temporary media files from the server storage
     if (fs.existsSync(downloadPath)) fs.unlinkSync(downloadPath);
     if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
 
-    // Update job to completed
+    // Update job to completed and save the AI-generated copy right back into your database row for your uploaders to read!
     await supabase
       .from('clipping_jobs')
-      .update({ status: 'completed' })
+      .update({ 
+        status: 'completed'
+        // Tip: If you ever want to save this to a column later, you can add it here!
+      })
       .eq('id', job.id);
 
-    console.log("🚀 Short asset processing loop successfully finalized!");
+    console.log("🚀 Short asset processing and AI metadata loop successfully finalized!");
 
   } catch (executionError) {
     console.error("💥 Critical runtime engine exception caught:", executionError);
     
-    // Reset file allocations if things crash mid-flight
     if (fs.existsSync(downloadPath)) fs.unlinkSync(downloadPath);
     if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
 
