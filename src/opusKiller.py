@@ -81,17 +81,13 @@ if not response:
 clean_json_str = response.text.replace("```json", "").replace("```", "").strip()
 metadata = json.loads(clean_json_str)
 
-# Load clip to check its actual length first
-    full_clip = VideoFileClip(local_raw_path)
-    
-    # Auto-adjust bounds so short test videos never cause a crash
-    start_time = min(metadata["start_sec"], full_clip.duration - 1)
-    end_time = min(metadata["end_sec"], full_clip.duration)
-    
-    if start_time < 0: start_time = 0
+full_clip = VideoFileClip(local_raw_path)
+start_time = min(metadata["start_sec"], full_clip.duration - 1)
+end_time = min(metadata["end_sec"], full_clip.duration)
+if start_time < 0: start_time = 0
 
-    print(f"🎬 Clipping viral sequence safely: {start_time}s - {end_time}s")
-    clip = full_clip.subclipped(start_time, end_time)
+print(f"🎬 Clipping viral sequence safely: {start_time}s - {end_time}s")
+clip = full_clip.subclipped(start_time, end_time)
 w, h = clip.size
 target_w = int(h * (9/16))
 cropped_clip = clip.cropped(x_center=w/2, y_center=h/2, width=target_w, height=h)
@@ -105,7 +101,6 @@ for sub in metadata["subtitles"]:
     if start_relative < 0 or start_relative > cropped_clip.duration:
         continue
 
-    # Bypasses the system font bug by using MoviePy's internal default canvas drawing rendering mechanics
     txt_clip = (TextClip(text=sub["text"], font_size=50, color='yellow', stroke_color='black', stroke_width=2, size=(target_w - 40, None))
                 .with_start(start_relative)
                 .with_end(min(end_relative, cropped_clip.duration))
