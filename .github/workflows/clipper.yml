@@ -1,0 +1,37 @@
+name: AutoClip Processor Engine
+
+on:
+  # Automatically runs every hour on the hour to check for new videos
+  schedule:
+    - cron: '0 * * * *'
+  # Allows you to manually click a button to force it to run instantly for testing
+  workflow_dispatch:
+
+jobs:
+  run-clipper:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js environmental runtime
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install system multimedia dependencies (FFmpeg)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+        ffmpeg -version
+
+    - name: Install project dependencies
+      run: npm install
+
+    - name: Execute Clipper Automation Engine
+      run: npx ts-node src/clipperEngine.ts
+      env:
+        VITE_SUPABASE_URL: https://yepxhuwfjhnayllitfrl.supabase.co
+        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InllcHhodXdmamhuYXlsbGl0ZnJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwOTU2OTMsImV4cCI6MjA5NjY3MTY5M30.hG1XkJ0X0csTgL8t1INTwLGs8769bLk6qOzMo-AZSKc
