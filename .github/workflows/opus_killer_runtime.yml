@@ -24,14 +24,20 @@ jobs:
         sudo apt-get install -y ffmpeg imagemagick libmagick++-dev
         sudo sed -i 's/rights="none" pattern="@\*"/rights="read|write" pattern="@\*"/g' /etc/ImageMagick-6/policy.xml
 
-    - name: Install Python Core Dependencies
+    - name: Configure Node.js Runtime environment
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Runtime Core Dependencies
       run: |
+        npm install
         python -m pip install --upgrade pip
         pip install supabase google-genai moviepy requests
 
-    - name: Execute Opus Alternative Engine Code
+    - name: Execute Clipper Wrapper Architecture
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: python src/opusKiller.py
+      run: npx tsx src/clipperEngine.ts
