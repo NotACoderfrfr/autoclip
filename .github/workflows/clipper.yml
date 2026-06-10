@@ -21,11 +21,14 @@ jobs:
         node-version: 22
         cache: 'npm'
 
-    - name: Install system multimedia dependencies (FFmpeg)
+    - name: Install system multimedia dependencies (FFmpeg & yt-dlp)
       run: |
         sudo apt-get update
         sudo apt-get install -y ffmpeg
+        sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp
+        sudo chmod a+rx /usr/local/bin/yt-dlp
         ffmpeg -version
+        yt-dlp --version
 
     - name: Install project dependencies
       run: npm install
