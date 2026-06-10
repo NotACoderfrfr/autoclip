@@ -31,7 +31,7 @@ jobs:
       run: npm install
 
     - name: Execute Clipper Automation Engine
-      run: npx ts-node --esm src/clipperEngine.ts
+      run: npx tsx src/clipperEngine.ts
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
