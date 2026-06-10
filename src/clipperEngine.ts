@@ -129,6 +129,23 @@ async function runClipperEngine() {
       }
     `;
 
+    let aiResponse = null;
+    const geminiRetries = 3;
+    
+    for (let i = 0; i < geminiRetries; i++) {
+      try {
+        aiResponse = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: aiPrompt,
+        });
+        break; // Success, exit retry loop
+      } catch (geminiErr: any) {
+        console.log(`⚠️ Gemini busy (Attempt ${i + 1}/${geminiRetries}). Retrying in 5 seconds...`);
+        if (i === geminiRetries - 1) throw geminiErr;
+        await new Promise(res => setTimeout(res, 5000));
+      }
+    }
+
     const aiResponse = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: aiPrompt,
