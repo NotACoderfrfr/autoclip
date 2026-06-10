@@ -30,7 +30,7 @@ async function transcribeAudio(audioPath: string, retries = 3): Promise<any[]> {
     try {
       // Using the modern direct Hugging Face pipeline model endpoint
       const response = await fetch(
-        "https://api-inference.huggingface.co/pipeline/automatic-speech-recognition/openai/whisper-large-v3",
+        ""https://api.huggingface.co/models/openai/whisper-large-v3"",
         {
           headers: { 
             Authorization: `Bearer ${hfToken}`,
