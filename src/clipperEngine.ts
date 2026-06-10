@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI } from '@google/genai';
 import YTDlpWrap from 'yt-dlp-wrap';
@@ -22,30 +21,41 @@ const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 // Initialize yt-dlp binary wrapper pointing directly to the runner's system path
 const ytDlpWrap = new YTDlpWrap.default('/usr/local/bin/yt-dlp');
 
-async function transcribeAudio(audioPath: string): Promise<any[]> {
+async function transcribeAudio(audioPath: string, retries = 3): Promise<any[]> {
   console.log("🎙️ Sending extracted audio track to serverless Whisper AI node...");
   const hfToken = process.env.HF_API_KEY || '';
   const audioData = fs.readFileSync(audioPath);
 
-  // Calling OpenAI's Whisper Large V3 via Hugging Face Serverless API for free
-  const response = await fetch(
-    "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
-    {
-      headers: { 
-        Authorization: `Bearer ${hfToken}`,
-        "Content-Type": "application/octet-stream"
-      },
-      method: "POST",
-      body: audioData,
-    }
-  );
+  for (let i = 0; i < retries; i++) {
+    try {
+      // Using the modern direct Hugging Face pipeline model endpoint
+      const response = await fetch(
+        "https://api-inference.huggingface.co/pipeline/automatic-speech-recognition/openai/whisper-large-v3",
+        {
+          headers: { 
+            Authorization: `Bearer ${hfToken}`,
+            "Content-Type": "application/octet-stream"
+          },
+          method: "POST",
+          body: audioData,
+        }
+      );
 
-  const result = await response.json();
-  if (!result.chunks) {
-    console.log("⚠️ Detailed timestamps unavailable. Falling back to basic chunk alignments.");
-    return [{ text: result.text || "", timestamp: [0, 10] }];
+      if (!response.ok) throw new Error(`Hugging Face API returned status ${response.status}`);
+
+      const result = await response.json();
+      if (!result.chunks) {
+        console.log("⚠️ Detailed timestamps unavailable. Falling back to basic chunk alignments.");
+        return [{ text: result.text || "", timestamp: [0, 10] }];
+      }
+      return result.chunks;
+    } catch (error) {
+      console.log(`⚠️ Network handshake failed (Attempt ${i + 1}/${retries}). Retrying...`);
+      if (i === retries - 1) throw error;
+      await new Promise(res => setTimeout(res, 5000)); // Wait 5 seconds before retrying
+    }
   }
-  return result.chunks;
+  return [];
 }
 
 function generateViralSubtitleFile(chunks: any[], subtitlePath: string) {
@@ -81,12 +91,12 @@ Style: ViralFont,Impact,85,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,1,0,0,0,1
     if (Math.random() > 0.6) {
       const words = cleanText.split(" ");
       if (words.length > 1) {
-        words[0] = `{\\c&H00FFFF&}\${words[0]}{\\c&H00FFFFFF&}`;
+        words[0] = `{\\c&H00FFFF&}${words[0]}{\\c&H00FFFFFF&}`;
         cleanText = words.join(" ");
       }
     }
 
-    assContent += `Dialogue: 0,\${startStr},\${endStr},ViralFont,,0,0,0,,\${cleanText}\n`;
+    assContent += `Dialogue: 0,${startStr},${endStr},ViralFont,,0,0,0,,${cleanText}\n`;
   });
 
   fs.writeFileSync(subtitlePath, assContent);
@@ -109,7 +119,7 @@ async function runClipperEngine() {
     return;
   }
 
-  console.log(`🎯 Found Target: "\${job.video_title}" (ID: \${job.source_video_id})`);
+  console.log(`🎯 Found Target: "${job.video_title}" (ID: ${job.source_video_id})`);
 
   const { error: updateError } = await supabase
     .from('clipping_jobs')
@@ -131,7 +141,6 @@ async function runClipperEngine() {
     console.log(`📥 Downloading source media stream directly from YouTube...`);
     const videoUrl = `https://www.youtube.com/watch?v=${job.source_video_id}`;
     
-    // Download video combining best tracks, utilizing secure cookies, and binding the node runtime environment path explicitly
     await ytDlpWrap.execPromise([
       videoUrl,
       '--cookies', path.join(process.cwd(), 'cookies.txt'),
@@ -175,7 +184,7 @@ async function runClipperEngine() {
     console.log("🔥 Spawning FFmpeg Stage 3: Baking kinetic caption structures into final frames...");
     await new Promise<void>((resolve, reject) => {
       ffmpeg(croppedPath)
-        .videoFilters(`subtitles=\${subtitlePath}`)
+        .videoFilters(`subtitles=${subtitlePath}`)
         .output(finalVideoPath)
         .on('end', () => {
           console.log("🎬 Final video composite with kinetic text subtitles rendered successfully!");
@@ -189,7 +198,7 @@ async function runClipperEngine() {
     console.log("🧠 Invoking Gemini AI Engine. Crafting viral title hooks and hashtags...");
     const aiPrompt = `
       You are an expert viral social media manager specializing in hyper-growth for YouTube Shorts and Instagram Reels.
-      Analyze the following original video title: "\${job.video_title}"
+      Analyze the following original video title: "${job.video_title}"
       
       Generate a highly-engaging response formatted EXACTLY like this text template block below, with no other conversational markdown filler text:
       
