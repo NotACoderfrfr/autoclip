@@ -62,7 +62,6 @@ You MUST return response EXACTLY as this JSON format, with no markdown formattin
 }
 """
 
-# Automatic retry loop to handle 503 high-demand server spikes smoothly
 response = None
 for attempt in range(1, 6):
     try:
@@ -88,7 +87,7 @@ w, h = clip.size
 target_w = int(h * (9/16))
 cropped_clip = clip.cropped(x_center=w/2, y_center=h/2, width=target_w, height=h)
 
-print("🔥 Burning custom kinetic font overlays onto frames...")
+print("🔥 Burning custom font overlays onto frames...")
 caption_clips = []
 for sub in metadata["subtitles"]:
     start_relative = sub["start"] - metadata["start_sec"]
@@ -97,8 +96,8 @@ for sub in metadata["subtitles"]:
     if start_relative < 0 or start_relative > cropped_clip.duration:
         continue
 
-    txt_clip = (TextClip(text=sub["text"], font_size=65, font='Impact', color='white', 
-                         stroke_color='black', stroke_width=3, size=(target_w - 60, None))
+    # Bypasses the system font bug by using MoviePy's internal default canvas drawing rendering mechanics
+    txt_clip = (TextClip(text=sub["text"], font_size=50, color='yellow', stroke_color='black', stroke_width=2, size=(target_w - 40, None))
                 .with_start(start_relative)
                 .with_end(min(end_relative, cropped_clip.duration))
                 .with_position(('center', 'center')))
