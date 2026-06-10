@@ -1,3 +1,4 @@
+import { supabase } from './supabaseClient'; // Adjusted path to pull from src root
 import { useState } from "react";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
@@ -12,8 +13,30 @@ import Footer from "./components/Footer";
 export default function App() {
   const [channelUrl, setChannelUrl] = useState("");
 
-  const handleLaunchDashboardWithUrl = (url: string) => {
+  const handleLaunchDashboardWithUrl = async (url: string) => {
     setChannelUrl(url);
+
+    if (!url) {
+      alert("Please enter a valid YouTube channel URL or @handle.");
+      return;
+    }
+
+    // --- MANUAL SUPABASE DATABASE INSERTION ---
+    try {
+      const { data, error } = await supabase
+        .from('automated_channels')
+        .insert([{ target_youtube_url: url }]);
+
+      if (error) {
+        console.error("Supabase Write Error:", error.message);
+      } else {
+        console.log("🚀 Stream tracking initialized successfully in Supabase!");
+      }
+    } catch (err) {
+      console.error("Database connection failure:", err);
+    }
+    // ------------------------------------------
+
     const dashboardElement = document.getElementById("dashboard");
     if (dashboardElement) {
       dashboardElement.scrollIntoView({ behavior: "smooth" });
