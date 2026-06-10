@@ -5,7 +5,8 @@ import requests
 from google import genai
 from google.genai import types
 from supabase import create_client, Client
-from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
+# Updated directly for modern MoviePy v2.0 namespace conventions
+from moviepy import VideoFileClip, TextClip, CompositeVideoClip
 
 # 1. Initialize API and Secure Client Ecosystems
 supabase_url = os.getenv("VITE_SUPABASE_URL") or ""
@@ -81,21 +82,21 @@ def build_open_source_opus_pipeline():
     target_w = int(h * (9/16))
     cropped_clip = clip.crop(x_center=w/2, y_center=h/2, width=target_w, height=h)
 
-    print("🔥 Burning custom kinetic font overlays onto frames...")
+   print("🔥 Burning custom kinetic font overlays onto frames...")
     caption_clips = []
     for sub in metadata["subtitles"]:
-        # Relative adjustment logic positioning word blocks cleanly in the center viewport
         start_relative = sub["start"] - metadata["start_sec"]
         end_relative = sub["end"] - metadata["start_sec"]
         
         if start_relative < 0 or start_relative > cropped_clip.duration:
             continue
 
-        txt_clip = (TextClip(sub["text"], fontsize=65, font='Impact', color='white', 
-                             stroke_color='black', stroke_width=3, method='caption', size=(target_w - 60, None))
-                    .set_start(start_relative)
-                    .set_end(min(end_relative, cropped_clip.duration))
-                    .set_position(('center', 'center')))
+        # Configured natively using updated layout strings for v2 frameworks
+        txt_clip = (TextClip(text=sub["text"], font_size=65, font='Impact', color='white', 
+                             stroke_color='black', stroke_width=3, size=(target_w - 60, None))
+                    .with_start(start_relative)
+                    .with_end(min(end_relative, cropped_clip.duration))
+                    .with_position(('center', 'center')))
         caption_clips.append(txt_clip)
 
     # Layer original sequence and text layers together natively
