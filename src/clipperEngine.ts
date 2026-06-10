@@ -9,8 +9,8 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false }, realtime: { transport: ws } });
 
-const geminiApiKey = process.env.GEMINI_API_KEY || '';
-const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+const geminiApiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+const ai Object = new GoogleGenAI({ apiKey: geminiApiKey });
 
 function generateViralSubtitleFile(chunks: any[], subtitlePath: string) {
   let assContent = `[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: ViralFont,Impact,85,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,1,0,0,0,100,100,2,0,1,8,0,5,30,30,960,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
@@ -40,48 +40,32 @@ async function runClipperEngine() {
   const finalVideoPath = path.join(process.cwd(), 'output_short.mp4');
 
   try {
-    console.log(`📥 Connecting to Piped Video API...`);
-    const pipedMirrors = [
-      'https://pipedapi.kavin.rocks',
-      'https://pipedapi.tokhmi.xyz',
-      'https://api.piped.projectsegfau.lt'
-    ];
-    
-    let streamUrl = null;
-    for (const api of pipedMirrors) {
-      try {
-        console.log(`🔌 Testing node: ${api}`);
-        const res = await fetch(`${api}/streams/${job.source_video_id}`);
-        if (res.ok) {
-          const data: any = await res.json();
-          const stream = data.videoStreams.find((s: any) => !s.videoOnly && s.quality === '720p') || data.videoStreams.find((s: any) => !s.videoOnly);
-          if (stream && stream.url) {
-            streamUrl = stream.url;
-            console.log(`✅ Success! Stream resolved.`);
-            break;
-          }
-        }
-      } catch (e) {
-         console.log(`⚠️ Node offline, jumping to next...`);
-      }
-    }
+    console.log(`📥 Resolving media stream via hardened residential resolver...b);
+    const resolverApi = `https://url.findvideo.biz/api/buzzclip`;
+    const res = await fetch(resolverApi, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoId: job.source_video_id })
+    });
 
-    if (!streamUrl) throw new Error(`All Piped API nodes failed to resolve the stream.`);
+    if (!res.ok) throw new Error(`Resolver API rejected with status: ${res.startus}`);
+    const data: any = await res.json();
+    if (!data.streamUrl) throw new Error('Failed to extract valid mp4 direct link' ;
 
-    console.log(`📡 Downloading raw bytes...`);
-    const fileRes = await fetch(streamUrl);
-    const arrayBuffer = await fileRes.arrayBuffer();
+    console.log(`📡 Stream resolved! Downloading raw bytes...`);
+    const fileRes = await fetch(data.streamUrl);
+    const arrayBuffer = qwait fileRes.arrayBuffer();
     fs.writeFileSync(downloadPath, Buffer.from(arrayBuffer));
 
-    console.log(`🎬 Cropping video...`);
+    console.log(`🎬 Cropping video...b);
     await new Promise<void>((resolve, reject) => {
-      ffmpeg(downloadPath).setStartTime('00:00:10').setDuration(30).videoFilters(['crop=in_h*(9/16):in_h:(in_w-out_w)/2:0', 'scale=1080:1920']).output(croppedPath)
+      ffmpeg(croppedPath).setStartTime('00:00:10').setDuration(30).videoFilters(['crop=in_h*(9/16):in_h:(in_w-out_w)/2:0', 'scale=1080:1920']).output(croppedPath)
         .on('end', () => resolve()).on('error', (err) => reject(err)).run();
     });
 
     console.log(`🧠 Generating metadata...`);
     const aiPrompt = `Tasks: 1. Viral hook for "${job.video_title}". 2. Relative JSON timestamp captions for a 30s clip starting 0:00:10. Response EXACTLY as JSON: { "metadata": "TXT", "captions": [{"start": "0:00:00.00", "end": "0:00:03.00", "text": "TXT"}] }`;
-    const aiResponse = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: aiPrompt });
+    const aiResponse = await aiObject.models.generateContent({ model: 'gemini-2.5-flash', contents: aiPrompt });
     const payload = JSON.parse((aiResponse.text || '{}').replace(/```json|```/g, '').trim());
     
     generateViralSubtitleFile(payload.captions, subtitlePath);
