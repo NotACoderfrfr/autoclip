@@ -1,10 +1,8 @@
 name: AutoClip Processor Engine
 
 on:
-  # Automatically runs every hour on the hour to check for new videos
   schedule:
     - cron: '0 * * * *'
-  # Allows you to manually click a button to force it to run instantly for testing
   workflow_dispatch:
 
 jobs:
@@ -32,6 +30,9 @@ jobs:
 
     - name: Install project dependencies
       run: npm install
+
+    - name: Create Cookies File
+      run: echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
 
     - name: Execute Clipper Automation Engine
       run: npx tsx src/clipperEngine.ts

@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI } from '@google/genai';
 import YTDlpWrap from 'yt-dlp-wrap';
@@ -80,12 +81,12 @@ Style: ViralFont,Impact,85,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,1,0,0,0,1
     if (Math.random() > 0.6) {
       const words = cleanText.split(" ");
       if (words.length > 1) {
-        words[0] = `{\\c&H00FFFF&}${words[0]}{\\c&H00FFFFFF&}`;
+        words[0] = `{\\c&H00FFFF&}\${words[0]}{\\c&H00FFFFFF&}`;
         cleanText = words.join(" ");
       }
     }
 
-    assContent += `Dialogue: 0,${startStr},${endStr},ViralFont,,0,0,0,,${cleanText}\n`;
+    assContent += `Dialogue: 0,\${startStr},\${endStr},ViralFont,,0,0,0,,\${cleanText}\n`;
   });
 
   fs.writeFileSync(subtitlePath, assContent);
@@ -108,7 +109,7 @@ async function runClipperEngine() {
     return;
   }
 
-  console.log(`🎯 Found Target: "${job.video_title}" (ID: ${job.source_video_id})`);
+  console.log(`🎯 Found Target: "\${job.video_title}" (ID: \${job.source_video_id})`);
 
   const { error: updateError } = await supabase
     .from('clipping_jobs')
@@ -128,10 +129,13 @@ async function runClipperEngine() {
 
   try {
     console.log(`📥 Downloading source media stream directly from YouTube...`);
-    const videoUrl = `https://www.youtube.com/watch?v=${job.source_video_id}`;
+    const videoUrl = `https://www.youtube.com/watch?v=\${job.source_video_id}`;
     
+    // Download video combining best tracks, utilizing secure cookies, and binding the node runtime environment path explicitly
     await ytDlpWrap.execPromise([
       videoUrl,
+      '--cookies', path.join(process.cwd(), 'cookies.txt'),
+      '--js-runtimes', 'node',
       '-f', 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]',
       '-o', downloadPath
     ]);
@@ -171,7 +175,7 @@ async function runClipperEngine() {
     console.log("🔥 Spawning FFmpeg Stage 3: Baking kinetic caption structures into final frames...");
     await new Promise<void>((resolve, reject) => {
       ffmpeg(croppedPath)
-        .videoFilters(`subtitles=${subtitlePath}`)
+        .videoFilters(`subtitles=\${subtitlePath}`)
         .output(finalVideoPath)
         .on('end', () => {
           console.log("🎬 Final video composite with kinetic text subtitles rendered successfully!");
@@ -185,7 +189,7 @@ async function runClipperEngine() {
     console.log("🧠 Invoking Gemini AI Engine. Crafting viral title hooks and hashtags...");
     const aiPrompt = `
       You are an expert viral social media manager specializing in hyper-growth for YouTube Shorts and Instagram Reels.
-      Analyze the following original video title: "${job.video_title}"
+      Analyze the following original video title: "\${job.video_title}"
       
       Generate a highly-engaging response formatted EXACTLY like this text template block below, with no other conversational markdown filler text:
       
