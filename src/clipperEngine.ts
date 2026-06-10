@@ -1,1 +1,97 @@
-import { createClient } from '@supabase/supabase-js';\nimport { GoogleGenAI } from '@google/genai';\nimport ffmpeg from 'fluent-ffmpeg';\nimport path from 'path';\nimport fs from 'fs';\nimport ws from 'ws';\n\nconst supabaseUrl = process.env.VITE_SUPABASE_URL || '';\nconst supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';\nconst supabase = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false }, realtime: { transport: ws } });\n\nconst geminiApiKey = process.env.GEMINI_API_KEY || '';\nconst ai = new GoogleGenAI({ apiKey: geminiApiKey });\n\nfunction generateViralSubtitleFile(chunks: any[], subtitlePath: string) {\n  let assContent = `[Script Info]\\nScriptType: v4.00+\\nPlayResX: 1080\\nPlayResY: 1920\\n\\n[V4+ Styles]\\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\\nStyle: ViralFont,Impact,85,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,1,0,0,0,100,100,2,0,1,8,0,5,30,30,960,1\\n\\n[Events]\\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\\n`;\n  chunks.forEach((chunk) => {\n    const startStr = chunk.start;\n    const endStr = chunk.end;\n    let cleanText = chunk.text.trim().toUpperCase();\n    if (Math.random() > 0.6 && cleanText.split(" ").length > 1) {\n      const words = cleanText.split(" ");\n      words[0] = `{\\\\c&H00FFFF&}${words[0]}{\\\\c&H00FFFFFF&}`;\n      cleanText = words.join(" ");\n    }\n    assContent += `Dialogue: 0,${startStr},${endStr},ViralFont,,0,0,0,,${cleanText}\\n`;\n  });\n  fs.writeFileSync(subtitlePath, assContent);\n}\n\nasync function runClipperEngine() {\n  const { data: job } = await supabase.from('clipping_jobs').select('*').eq('status', 'queued').order('created_at', { ascending: true }).limit(1).single();\n  if (!job) return;\n  await supabase.from('clipping_jobs').update({ status: 'processing' }).eq('id', job.id);\n  const downloadPath = path.join(process.cwd(), 'raw_video.mp4');\n  const croppedPath = path.join(process.cwd(), 'cropped_video.mp4');\n  const subtitlePath = path.join(process.cwd(), 'subtitles.ass');\n  const finalVideoPath = path.join(process.cwd(), 'output_short.mp4');\n  try {\n    const apiMirrorUrl = `https://api.cobalt.tools/api/json`;\n    const mirrorResponse = await fetch(apiMirrorUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${job.source_video_id}`, vQuality: '720', filenamePattern: 'basic' }) });\n    const mirrorData: any = await mirrorResponse.json();\n    const fileStreamResponse = await fetch(mirrorData.url);\n    const fileBuffer = await fileStreamResponse.arrayBuffer();\n    fs.writeFileSync(downloadPath, Buffer.from(fileBuffer));\n    await new Promise<void>((resolve, reject) => { ffmpeg(downloadPath).setStartTime('00:00:10').setDuration(30).videoFilters(['crop=in_h*(9/16):in_h:(in_w-out_w)/2:0', 'scale=1080:1920']).output(croppedPath).on('end', () => resolve()).on('error', (err) => reject(err)).run(); });\n    const aiPrompt = `Tasks: 1. Viral title context hook for "${job.video_title}". 2. Relative JSON timestamp dialogue captions for a 30s clip starting at 0:00:10 to 0:00:40. Structure response EXACTLY as JSON string: { "metadata": "TEXT", "captions": [{"start": "0:00:00.00", "end": "0:00:03.00", "text": "TXT"}] }`;\n    let aiResponse = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: aiPrompt });\n    const payload = JSON.parse((aiResponse.text || '{}').replace(/```json|```/g, '').trim());\n    generateViralSubtitleFile(payload.captions, subtitlePath);\n    await new Promise<void>((resolve, reject) => { ffmpeg(croppedPath).videoFilters(`subtitles=${subtitlePath}`).output(finalVideoPath).on('end', () => resolve()).on('error', (err) => reject(err)).run(); });\n    [downloadPath, croppedPath, subtitlePath, finalVideoPath].forEach((p) => { if (fs.existsSync(p)) fs.unlinkSync(p); });\n    await supabase.from('clipping_jobs').update({ status: 'completed' }).eq('id', job.id);\n  } catch (err) {\n    [downloadPath, croppedPath, subtitlePath, finalVideoPath].forEach((p) => { if (fs.existsSync(p)) fs.unlinkSync(p); });\n    await supabase.from('clipping_jobs').update({ status: 'failed' }).eq('id', job.id);\n  }\n}\nrunClipperEngine();
+import { createClient } from '@supabase/supabase-js';
+import { GoogleGenAI } from '@google/genai';
+import ffmpeg from 'fluent-ffmpeg';
+import path from 'path';
+import fs from 'fs';
+import ws from 'ws';
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false }, realtime: { transport: ws } });
+
+const geminiApiKey = process.env.GEMINI_API_KEY || '';
+const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+function generateViralSubtitleFile(chunks: any[], subtitlePath: string) {
+  let assContent = `[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: ViralFont,Impact,85,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,1,0,0,0,100,100,2,0,1,8,0,5,30,30,960,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+
+  chunks.forEach((chunk) => {
+    const startStr = chunk.start;
+    const endStr = chunk.end;
+    let cleanText = chunk.text.trim().toUpperCase();
+    if (Math.random() > 0.6 && cleanText.split(" ").length > 1) {
+      const words = cleanText.split(" ");
+      words[0] = `{\\c&H00FFFF&}${words[0]}{\\c&H00FFFFFF&}`;
+      cleanText = words.join(" ");
+    }
+    assContent += `Dialogue: 0,${startStr},${endStr},ViralFont,,0,0,0,,${cleanText}\n`;
+  });
+  fs.writeFileSync(subtitlePath, assContent);
+}
+
+async function runClipperEngine() {
+  const { data: job } = await supabase.from('clipping_jobs').select('*').eq('status', 'queued').order('created_at', { ascending: true }).limit(1).single();
+  if (!job) return;
+
+  await supabase.from('clipping_jobs').update({ status: 'processing' }).eq('id', job.id);
+  const downloadPath = path.join(process.cwd(), 'raw_video.mp4');
+  const croppedPath = path.join(process.cwd(), 'cropped_video.mp4');
+  const subtitlePath = path.join(process.cwd(), 'subtitles.ass');
+  const finalVideoPath = path.join(process.cwd(), 'output_short.mp4');
+
+  try {
+    console.log(`📥 Downloading via Cobalt proxy API...`);
+    const mirrorResponse = await fetch(`https://api.cobalt.tools/api/json`, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${job.source_video_id}`, vQuality: '720', filenamePattern: 'basic' })
+    });
+
+    if (!mirrorResponse.ok) throw new Error(`Cobalt API rejected.`);
+    const mirrorData: any = await mirrorResponse.json();
+    
+    const fileStreamResponse = await fetch(mirrorData.url);
+    const fileBuffer = await fileStreamResponse.arrayBuffer();
+    fs.writeFileSync(downloadPath, Buffer.from(fileBuffer));
+
+    console.log(`🎬 Cropping video...`);
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(downloadPath).setStartTime('00:00:10').setDuration(30).videoFilters(['crop=in_h*(9/16):in_h:(in_w-out_w)/2:0', 'scale=1080:1920']).output(croppedPath)
+        .on('end', () => resolve()).on('error', (err) => reject(err)).run();
+    });
+
+    console.log(`🧠 Generating metadata...`);
+    const aiPrompt = `Tasks: 1. Viral hook for "${job.video_title}". 2. Relative JSON timestamp captions for a 30s clip starting 0:00:10. Response EXACTLY as JSON: { "metadata": "TXT", "captions": [{"start": "0:00:00.00", "end": "0:00:03.00", "text": "TXT"}] }`;
+    const aiResponse = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: aiPrompt });
+    const payload = JSON.parse((aiResponse.text || '{}').replace(/```json|```/g, '').trim());
+    
+    generateViralSubtitleFile(payload.captions, subtitlePath);
+
+    console.log(`🔥 Burning subtitles...`);
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(croppedPath).videoFilters(`subtitles=${subtitlePath}`).output(finalVideoPath)
+        .on('end', () => resolve()).on('error', (err) => reject(err)).run();
+    });
+
+    [downloadPath, croppedPath, subtitlePath, finalVideoPath].forEach(p => fs.existsSync(p) && fs.unlinkSync(p));
+    await supabase.from('clipping_jobs').update({ status: 'completed' }).eq('id', job.id);
+    console.log(`✅ Success!`);
+
+  } catch (err: any) {
+    console.error(`💥 Error:`, err.message);
+    [downloadPath, croppedPath, subtitlePath, finalVideoPath].forEach(p => fs.existsSync(p) && fs.unlinkSync(p));
+    await supabase.from('clipping_jobs').update({ status: 'failed' }).eq('id', job.id);
+  }
+}
+
+runClipperEngine();
