@@ -17,7 +17,8 @@ ai_client = genai.Client(api_key=gemini_key)
 
 def build_open_source_opus_pipeline():
     print("🛸 Scanning Supabase raw-videos bucket for incoming files...")
-    bucket_files = supabase.storage.from_("raw-videos").list()
+    # Explicitly targeted at the root directory of your storage bucket
+    bucket_files = supabase.storage.from_("raw-videos").list(path="")
     
     valid_videos = [f for f in bucket_files if f['name'] != '.emptyFolderPlaceholder']
     if not valid_videos:
