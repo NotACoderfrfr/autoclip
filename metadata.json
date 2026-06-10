@@ -1,0 +1,6 @@
+{
+  "name": "AutoClip",
+  "description": "A premium, free alternative to paid AI video clipping software. Automatically turn YouTube videos into viral vertical Shorts, Reels, and TikToks with dynamic captions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
