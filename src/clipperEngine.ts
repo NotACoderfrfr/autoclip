@@ -39,10 +39,10 @@ Style: ViralFont,Impact,85,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,1,0,0,0,1
     
     if (Math.random() > 0.6 && cleanText.split(" ").length > 1) {
       const words = cleanText.split(" ");
-      words[0] = `{\\c&H00FFFF&}${words[0]}{\\c&H00FFFFFF&}`;
+      words[0] = `{\\c&H00FFFF&}\${words[0]}{\\c&H00FFFFFF&}`;
       cleanText = words.join(" ");
     }
-    assContent += `Dialogue: 0,${startStr},${endStr},ViralFont,,0,0,0,,${cleanText}\n`;
+    assContent += `Dialogue: 0,\${startStr},\${endStr},ViralFont,,0,0,0,,\${cleanText}\n`;
   });
 
   fs.writeFileSync(subtitlePath, assContent);
@@ -65,7 +65,7 @@ async function runClipperEngine() {
     return;
   }
 
-  console.log(`🎯 Found Target: "${job.video_title}" (ID: ${job.source_video_id})`);
+  console.log(`🎯 Found Target: "\${job.video_title}" (ID: \${job.source_video_id})`);
 
   const { error: updateError } = await supabase
     .from('clipping_jobs')
@@ -84,7 +84,7 @@ async function runClipperEngine() {
 
   try {
     console.log(`📥 Downloading source media stream directly from YouTube...`);
-    const videoUrl = `https://www.youtube.com/watch?v=${job.source_video_id}`;
+    const videoUrl = `https://www.youtube.com/watch?v=\${job.source_video_id}`;
     
     await ytDlpWrap.execPromise([
       videoUrl,
@@ -113,7 +113,7 @@ async function runClipperEngine() {
     console.log("🧠 Invoking Gemini AI Processing Core for Metadata & Time-Synced Captions...");
     const aiPrompt = `
       You are an expert social media growth automation system. 
-      Analyze this video title: "${job.video_title}"
+      Analyze this video title: "\${job.video_title}"
       
       Tasks to execute:
       1. Generate a viral title hook, description container, and tags.
@@ -139,17 +139,12 @@ async function runClipperEngine() {
           contents: aiPrompt,
         });
         break; // Success, exit retry loop
-      } catch (geminiErr: any) {
-        console.log(`⚠️ Gemini busy (Attempt ${i + 1}/${geminiRetries}). Retrying in 5 seconds...`);
+      } catch (geminiErr) {
+        console.log(`⚠️ Gemini busy (Attempt \${i + 1}/\${geminiRetries}). Retrying in 5 seconds...`);
         if (i === geminiRetries - 1) throw geminiErr;
         await new Promise(res => setTimeout(res, 5000));
       }
     }
-
-    const aiResponse = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: aiPrompt,
-    });
 
     const responseText = aiResponse.text || "{}";
     // Strips markdown code blocks if the AI includes them accidentally
@@ -174,7 +169,7 @@ async function runClipperEngine() {
     console.log("🔥 Spawning FFmpeg Stage 2: Baking kinetic caption structures into final frames...");
     await new Promise<void>((resolve, reject) => {
       ffmpeg(croppedPath)
-        .videoFilters(`subtitles=${subtitlePath}`)
+        .videoFilters(`subtitles=\${subtitlePath}`)
         .output(finalVideoPath)
         .on('end', () => {
           console.log("🎬 Final video composite with kinetic text subtitles rendered successfully!");
