@@ -2,8 +2,8 @@ name: Open-Source Opus Clip Generator Engine
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 * * * *'
+  repository_dispatch:
+    types: [video_uploaded] # Wakes up instantly via webhook
 
 jobs:
   render-viral-clips:

@@ -29,7 +29,6 @@ print("🧠 Uploading video asset to Gemini cloud workspace...")
 cloud_file = ai_client.files.upload(file=local_raw_path)
 
 print("⏳ Waiting for Google's servers to process the media file...")
-# Wait loop to make sure the file state switches to ACTIVE
 while True:
     file_info = ai_client.files.get(name=cloud_file.name)
     state = file_info.state.name if hasattr(file_info.state, 'name') else str(file_info.state)
@@ -63,10 +62,22 @@ You MUST return response EXACTLY as this JSON format, with no markdown formattin
 }
 """
 
-response = ai_client.models.generate_content(
-    model='gemini-2.5-flash',
-    contents=[cloud_file, ai_prompt]
-)
+# Automatic retry loop to handle 503 high-demand server spikes smoothly
+response = None
+for attempt in range(1, 6):
+    try:
+        response = ai_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[cloud_file, ai_prompt]
+        )
+        break 
+    except Exception as e:
+        print(f"⚠️ Google Server is busy (Attempt {attempt}/5). Retrying in 10 seconds...")
+        time.sleep(10)
+
+if not response:
+    print("💥 Error: Gemini remained unavailable after multiple attempts. Exiting.")
+    sys.exit(1)
 
 clean_json_str = response.text.replace("```json", "").replace("```", "").strip()
 metadata = json.loads(clean_json_str)
@@ -119,7 +130,6 @@ requests.post(sheet_url, json={
 print("🧹 Purging cloud storage source queue...")
 supabase.storage.from_("raw-videos").remove([target_file])
 
-# Clean up local workspace memory allocations
 clip.close()
 final_clip.close()
 try:
