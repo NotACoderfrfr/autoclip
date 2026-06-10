@@ -18,8 +18,8 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 const geminiApiKey = process.env.GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
-// Initialize yt-dlp binary wrapper
-const ytDlpWrap = new YTDlpWrap.default();
+// Initialize yt-dlp binary wrapper pointing directly to the runner's system path
+const ytDlpWrap = new YTDlpWrap.default('/usr/local/bin/yt-dlp');
 
 async function transcribeAudio(audioPath: string): Promise<any[]> {
   console.log("🎙️ Sending extracted audio track to serverless Whisper AI node...");
