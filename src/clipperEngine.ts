@@ -135,8 +135,21 @@ async function runClipperEngine() {
     });
 
     const responseText = aiResponse.text || "{}";
+    // Strips markdown code blocks if the AI includes them accidentally
     const cleanedJson = responseText.replace(/```json|```/g, "").trim();
-    const payload = JSON.parse(cleanedJson);
+    
+    let payload;
+    try {
+      payload = JSON.parse(cleanedJson);
+    } catch (jsonErr) {
+      console.log("⚠️ AI did not return raw JSON. Creating structural fallback.");
+      payload = {
+        metadata: responseText,
+        captions: [
+          {"start": "0:00:00.00", "end": "0:00:05.00", "text": job.video_title}
+        ]
+      };
+    }
 
     console.log("🔥 AI Metadata Generation Strategy Finalized:\n", payload.metadata);
     generateViralSubtitleFile(payload.captions, subtitlePath);
